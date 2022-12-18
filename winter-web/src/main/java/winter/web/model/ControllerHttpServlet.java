@@ -3,6 +3,10 @@ package winter.web.model;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -11,7 +15,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import winter.web.annotation.GetMapping;
-import winter.web.annotation.RequestMapping;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,20 +34,21 @@ public class ControllerHttpServlet extends HttpServlet {
         Gson gson = new Gson();
         PrintWriter writer = response.getWriter();
 
-        String prefixUrl = controller.getClass().getAnnotation(RequestMapping.class).value();
-        String url = request.getRequestURI();
-
+        String path = request.getPathInfo();
         try {
             Object result = null;
             Method[] methods = controller.getClass().getDeclaredMethods();
             for (Method method : methods) {
                 if (method.isAnnotationPresent(GetMapping.class)) {
-                    String methodUrl =
-                            prefixUrl + method.getDeclaredAnnotation(GetMapping.class).value();
+                    String urlPattern = method.getDeclaredAnnotation(GetMapping.class).value();
 
-                    if (methodUrl.equals(url)) {
-                        result = method.invoke(controller);
+                    if (!isMatchUrl(urlPattern, path)) {
+                        continue;
                     }
+
+                    List<PathMapper> pathMappers = getPathMapper(urlPattern, path);
+                    System.out.println("pathMappers: " + pathMappers);
+                    result = method.invoke(controller);
                 }
             }
 
@@ -74,5 +78,38 @@ public class ControllerHttpServlet extends HttpServlet {
 
     private void setApplicationJson(HttpServletResponse response) {
         response.setContentType(APPLICATION_JSON);
+    }
+
+    private boolean isMatchUrl(String urlPattern, String url) {
+        return urlPattern.split("/").length == url.split("/").length;
+    }
+
+    private List<PathMapper> getPathMapper(String url, String path) {
+
+        String urlPattern = url.replaceAll("\\{[^//]+\\}", "(.+)");
+        System.out.println("urlPattern: " + urlPattern);
+
+        List<String> urlSplit = Arrays.asList(url.split("/"));
+        System.out.println("urlSplit: " + urlSplit);
+
+        List<PathMapper> pathMappers =
+                urlSplit.stream().filter(ele -> ele.matches("\\{.+\\}")).map(ele -> {
+                    String key = ele.replace("{", "");
+                    return new PathMapper(key, null);
+                }).toList();
+
+        // Create a Pattern object
+        Pattern r = Pattern.compile(urlPattern);
+
+        // Now create matcher object.
+        Matcher m = r.matcher(path);
+
+        if (m.find()) {
+            for (int i = 1; i <= pathMappers.size(); i++) {
+                pathMappers.get(i - 1).setValue(m.group(i));
+            }
+        }
+
+        return pathMappers;
     }
 }

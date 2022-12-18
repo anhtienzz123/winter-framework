@@ -9,13 +9,8 @@ import winter.web.annotation.RequestMapping;
 @RequestMapping("/products")
 public class ProductController {
 
-    @GetMapping("/detail1")
-    public Product getProductDetail1() {
+    @GetMapping("/{id}")
+    public Product getProductDetail() {
         return new Product(1, "product name 1", 10.0, 100);
-    }
-
-    @GetMapping("/detail2")
-    public Product getProductDetail2() {
-        return new Product(2, "product name 2", 20.0, 200);
     }
 }
