@@ -1,12 +1,13 @@
 package ecommerce.web;
 
+import winter.core.WinterRunner;
 import winter.core.annotation.WinterApplication;
-import winter.web.WinterWebApplication;
 
-@WinterApplication
+@WinterApplication(scanBasePackages = {"ecommerce.web.configuration", "ecommerce.web.controller",
+        "ecommerce.web.entity", "ecommerce.web.repository", "ecommerce.web.service.impl"})
 public class EcommerceWebApplication {
 
     public static void main(String[] args) {
-        WinterWebApplication.run(EcommerceWebApplication.class);
+        WinterRunner.run(EcommerceWebApplication.class);
     }
 }

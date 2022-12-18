@@ -1,12 +1,19 @@
 package winter.web;
 
 import java.io.File;
+import java.util.List;
 import java.util.Optional;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.startup.Tomcat;
 import jakarta.servlet.http.HttpServlet;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import winter.web.annotation.RequestMapping;
+import winter.web.model.ControllerHttpServlet;
 
+@NoArgsConstructor
+@AllArgsConstructor
 public class TomcatServer {
 
     private Tomcat tomcat;
@@ -19,7 +26,7 @@ public class TomcatServer {
 
     private static final Optional<String> HOSTNAME = Optional.ofNullable(System.getenv("HOSTNAME"));
 
-    public void start() {
+    public void start(List<Object> controllers) {
         this.tomcat = new Tomcat();
         this.tomcat.setBaseDir("temp");
         this.tomcat.setPort(Integer.valueOf(PORT.orElse("8080")));
@@ -28,7 +35,7 @@ public class TomcatServer {
         String docBase = new File(".").getAbsolutePath();
         this.context = tomcat.addContext(CONTEXT_PATH, docBase);
 
-        addServlet();
+        controllers.forEach(this::addServlet);
 
         // start server
         this.tomcat.getConnector();
@@ -40,13 +47,13 @@ public class TomcatServer {
         this.tomcat.getServer().await();
     }
 
-    public void addServlet() {
-        // add TestServlet
-        HttpServlet servlet = new TestServlet();
-        String servletName = "test";
-        String urlPattern = "/test";
+    public void addServlet(Object controller) {
+        HttpServlet servlet = new ControllerHttpServlet(controller);
+        String servletName = controller.getClass().getSimpleName();
+        String url =
+                controller.getClass().getDeclaredAnnotation(RequestMapping.class).value() + "/*";
 
         tomcat.addServlet(CONTEXT_PATH, servletName, servlet);
-        context.addServletMappingDecoded(urlPattern, servletName);
+        context.addServletMappingDecoded(url, servletName);
     }
 }
